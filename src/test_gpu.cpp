@@ -5,6 +5,7 @@
 #include "CPU_PageRank.hpp"
 #include "CPU_Community_Detection_update.hpp"
 #include "CPU_Community_Detection.hpp"
+#include "CPU_LCC.hpp"
 
 #include <GPU_BFS.cuh>
 #include <GPU_connected_components.cuh>
@@ -205,6 +206,22 @@ int main()
                 wcc_ldbc_checker_v2(graph, gpu_wcc_result_v2, wcc_pass);
             }
         }
+
+ if (graph.sup_lcc) {
+            int lcc_pass = 0;
+
+            if (1) {
+                std::vector<double> cpu_lcc_result;
+                begin = std::chrono::high_resolution_clock::now();
+                cpu_lcc_result = computeLCC<double>(graph);
+                end = std::chrono::high_resolution_clock::now();
+                double cpu_lcc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() / 1e9; // s
+                printf("CPU LCC cost time: %f s\n", cpu_lcc_time);
+                // wcc_checker(graph, cpu_wcc_result, wcc_pass);
+                // wcc_ldbc_checker(graph, cpu_wcc_result, wcc_pass);
+            }
+
+}
 
          if (graph.sup_pr) {
             int pr_pass = 0;

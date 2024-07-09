@@ -66,6 +66,7 @@ public:
 	bool sup_pr = false;
 	bool sup_wcc = false;
 	bool sup_sssp = false;
+	bool sup_lcc = false;
 
 	std::string bfs_src_name;//get bfs vertex source
 	std::string sssp_src_name;//get sssp vertex source
