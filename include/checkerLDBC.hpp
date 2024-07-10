@@ -314,6 +314,76 @@ void pr_ldbc_checker(LDBC<double>& graph, std::vector<double>& cpu_res, int & is
     base_line.close();
 }
 
+
+void lcc_ldbc_checker(LDBC<double>& graph, std::vector<double>& cpu_res, int & is_pass) {
+    
+    int size = cpu_res.size();
+
+    if (size != graph.V) {
+        std::cout << "Size of LCC results is not equal to the number of vertices!" << std::endl;
+        return;
+    }
+
+    // std::string base_line_file = "../results/" + graph.vertex_file;
+    std::string base_line_file = "/home/liupeng/data/LdbcDataset/" + graph.vertex_file;
+
+    // remove the last two char
+
+    base_line_file.pop_back();
+    base_line_file.pop_back();
+
+    base_line_file += "-LCC";
+
+    std::ifstream base_line(base_line_file);
+
+    if (!base_line.is_open()) {
+        std::cout << "Baseline file not found!" << std::endl;
+        return;
+    }
+
+    int id = 0;
+    std::string line;
+    while (std::getline(base_line, line)) {
+        std::vector<std::string> tokens;
+        tokens = parse_string(line, " ");
+        if (tokens.size() != 2) {
+            std::cout << "Baseline file format error!" << std::endl;
+            base_line.close();
+            return;
+        }
+        if (id >= size) {
+            std::cout << "Size of baseline file is larger than the result!" << std::endl;
+            base_line.close();
+            return;
+        }
+
+        if (graph.vertex_str_to_id.find(tokens[0]) == graph.vertex_str_to_id.end()) {
+            std::cout << "Baseline file contains a vertex that is not in the graph!" << std::endl;
+            base_line.close();
+            return;
+        }
+        int v_id = graph.vertex_str_to_id[tokens[0]];
+
+        if (fabs(cpu_res[v_id] - std::stod(tokens[1])) > 1e-4) {
+            std::cout << "Baseline file and GPU LCC results are not the same!" << std::endl;
+            std::cout << "Baseline file: " << tokens[0] << " " << tokens[1] << std::endl;
+            std::cout << "GPU LCC result: " << graph.vertex_id_to_str[v_id] << " " << cpu_res[v_id] << std::endl;
+            base_line.close();
+            return;
+        }
+        id++;
+    }
+    if (id != size) {
+        std::cout << "Size of baseline file is smaller than the result!" << std::endl;
+        base_line.close();
+        return;
+    }
+
+    std::cout << "LCC results are correct!" << std::endl;
+    is_pass = 1;
+    base_line.close();
+}
+
 void cdlp_ldbc_check(LDBC<double>& graph, std::vector<string>& cpu_res, int & is_pass) {
     
     int size = cpu_res.size();

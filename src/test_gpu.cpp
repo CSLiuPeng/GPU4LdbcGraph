@@ -11,6 +11,7 @@
 #include <GPU_connected_components.cuh>
 #include <GPU_shortest_paths.cuh>
 #include <GPU_PageRank.cuh>
+#include <gpu_lcc2.cuh>
 #include "GPU_Community_Detection.cuh"
 #include "../include/ldbc.hpp"
 // #include <checker.hpp>
@@ -207,7 +208,7 @@ int main()
             }
         }
 
- if (graph.sup_lcc) {
+        if (graph.sup_lcc) {
             int lcc_pass = 0;
 
             if (1) {
@@ -217,11 +218,21 @@ int main()
                 end = std::chrono::high_resolution_clock::now();
                 double cpu_lcc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() / 1e9; // s
                 printf("CPU LCC cost time: %f s\n", cpu_lcc_time);
-                // wcc_checker(graph, cpu_wcc_result, wcc_pass);
-                // wcc_ldbc_checker(graph, cpu_wcc_result, wcc_pass);
+                lcc_ldbc_checker(graph, cpu_lcc_result, lcc_pass);
             }
 
-}
+            if(1){
+                std::vector<double> gpu_lcc_result;
+                begin = std::chrono::high_resolution_clock::now();
+                gpu_lcc_result = computeLCC_GPU(graph);
+                end = std::chrono::high_resolution_clock::now();
+                double gpu_lcc_time = std::chrono::duration_cast<std::chrono::nanoseconds>(end - begin).count() / 1e9; // s
+                printf("GPU LCC cost time: %f s\n", gpu_lcc_time);
+                lcc_ldbc_checker(graph, gpu_lcc_result, lcc_pass);
+            }
+
+
+        }
 
          if (graph.sup_pr) {
             int pr_pass = 0;

@@ -192,12 +192,15 @@ void LDBC<weight_type>::read_config(std::string config_path) {
 						sup_sssp = true;
 					else if (algorithm == "wcc")
 						sup_wcc = true;
+					else if (algorithm == "lcc")
+						sup_lcc = true;
 				}
 				std::cout << "bfs: " << sup_bfs << std::endl;
 				std::cout << "cdlp: " << sup_cdlp << std::endl;
 				std::cout << "pr: " << sup_pr << std::endl;
 				std::cout << "sssp: " << sup_sssp << std::endl;
 				std::cout << "wcc: " << sup_wcc << std::endl;
+				std::cout << "lcc: " << sup_lcc << std::endl;
 			}
 			else if (parts.back() == "cdlp-max-iterations") {
 				cdlp_max_its = stoi(value);
