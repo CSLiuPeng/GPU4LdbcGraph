@@ -19,6 +19,9 @@
 #include "../include/resultVSldbc.hpp"
 #include <time.h>
 #include <map>
+#include <iostream>
+#include <cuda_runtime.h>
+#include <unistd.h>
 //one test one result file
 void saveAsCSV(const unordered_map<string, string>& data, const string& filename);
 
@@ -28,19 +31,39 @@ void writeToCSV(const unordered_map<string, string>& data, const string& filenam
 
 int main()
 {
+    long hostCount = sysconf(_SC_NPROCESSORS_ONLN);  
+    int deviceCount;
+    cudaError_t error = cudaGetDeviceCount(&deviceCount);
+    std::cout << "Found " << hostCount   << " CPU capable device(s)." << std::endl<<std::endl;
+    std::cout << "Found " << deviceCount << " CUDA capable device(s)." << std::endl<<std::endl;
+
+    for (int i = 0; deviceCount > 0 && i < deviceCount; i++) {  
+        cudaDeviceProp prop;  
+        cudaGetDeviceProperties(&prop, i);  
+  
+        std::cout << "Device " << i << ": " << prop.name << std::endl;  
+        std::cout << "  Total global memory: " << prop.totalGlobalMem / (1024 * 1024) << " MB" << std::endl;  
+        std::cout << "  Multi-processor count: " << prop.multiProcessorCount << std::endl;  
+        std::cout << "  Max threads per block: " << prop.maxThreadsPerBlock << std::endl;  
+        std::cout << "  Max threads per multi-processor: " << prop.maxThreadsPerMultiProcessor << std::endl;  
+        std::cout << "  Compute capability: " << prop.major << "." << prop.minor << std::endl<<std::endl;  
+    }
+
+    // 选择第一个GPU设备
+    cudaSetDevice(0);
 
     // std::string config_file = "datagen-7_5-fb.properties";//quick test
-    // std::string config_file = "cit-Patents.properties";//quick test
 
-    vector<string> datas = {"cit-Patents.properties","datagen-7_5-fb.properties",
-    "datagen-7_6-fb.properties","datagen-7_7-zf.properties",
-    "datagen-7_8-zf.properties", "datagen-7_9-fb.properties",
-    "datagen-8_0-fb.properties","datagen-8_1-fb.properties"};
+    // vector<string> datas = {"cit-Patents.properties","datagen-7_5-fb.properties",
+    // "datagen-7_6-fb.properties","datagen-7_7-zf.properties",
+    // "datagen-7_8-zf.properties", "datagen-7_9-fb.properties",
+    // "datagen-8_0-fb.properties","datagen-8_1-fb.properties"};
+
+    vector<string> datas = {"cit-Patents.properties","datagen-7_5-fb.properties"};
     
     for (string config_file : datas) {
 
         config_file = "/home/liupeng/data/LdbcDataset/" + config_file;
-        std::cout << "config_file is:" << config_file << endl;
 
         // graph_structure<double> graph;
         LDBC<double> graph;
@@ -60,7 +83,7 @@ int main()
         std::cout << "Number of edges: " << csr_graph.OUTs_Edges.size() << std::endl;
         printf("graph_to_csr_time cost time: %f s\n", graph_to_csr_time);
 
-       
+       //save result
         float elapsedTime = 0;
         unordered_map<string, string> umap_all_res;
         size_t lastSlashPos = config_file.find_last_of("/\\");
@@ -70,8 +93,8 @@ int main()
 
         if (graph.sup_bfs) {
             int bfs_pass = 0;
-        
-            if (1) {
+
+            if (hostCount != 0) {
                 std::vector<int> cpu_bfs_result;
                 auto begin = std::chrono::high_resolution_clock::now();
                 cpu_bfs_result = CPU_BFS<double>(graph.OUTs, graph.bfs_src);
@@ -82,8 +105,7 @@ int main()
                 bfs_ldbc_checker(graph, cpu_bfs_result, bfs_pass);
 
             }
-
-            if(1){
+            if(hostCount != 0){
                 std::vector<std::string> cpu_bfs_result_v2;
                 begin = std::chrono::high_resolution_clock::now();
                 cpu_bfs_result_v2 = CPU_BFS_v2(graph);
@@ -93,7 +115,7 @@ int main()
                 bfs_ldbc_checker_v2(graph, cpu_bfs_result_v2, bfs_pass);
             }
 
-            if (1) {
+            if (deviceCount != 0) {
                 std::vector<int> gpu_bfs_result;
                 begin = std::chrono::high_resolution_clock::now();
                 gpu_bfs_result = cuda_bfs(csr_graph, graph.bfs_src, &elapsedTime);
@@ -104,7 +126,7 @@ int main()
                 bfs_ldbc_checker(graph, gpu_bfs_result, bfs_pass);   
             }
 
-            if(1){
+            if(deviceCount != 0){
                 std::vector<std::string> gpu_bfs_result_v2;
                 begin = std::chrono::high_resolution_clock::now();
                 gpu_bfs_result_v2 = cuda_bfs_v2(graph, csr_graph);
@@ -118,7 +140,7 @@ int main()
         if (graph.sup_sssp) {
             int sssp_pass = 0;
 
-            if (1) {
+            if (hostCount != 0) {
                 auto begin = std::chrono::high_resolution_clock::now();
                 std::vector<double> cpu_sssp_result = CPU_shortest_paths(graph.OUTs, graph.sssp_src);
                 auto end = std::chrono::high_resolution_clock::now();
@@ -129,7 +151,7 @@ int main()
 
             }
 
-            if(1){
+            if(hostCount != 0){
                 begin = std::chrono::high_resolution_clock::now();
                 std::vector<std::string> cpu_sssp_result_v2 = CPU_shortest_paths_v2(graph);
                 end = std::chrono::high_resolution_clock::now();
@@ -138,7 +160,7 @@ int main()
                 sssp_ldbc_checker_v2(graph, cpu_sssp_result_v2, sssp_pass);
             }
 
-            if (1) {
+            if (deviceCount != 0) {
                 std::vector<double> gpu_sssp_result(graph.V, 0);
                 begin = std::chrono::high_resolution_clock::now();
                 gpu_shortest_paths(csr_graph, graph.sssp_src, gpu_sssp_result, &elapsedTime);
@@ -150,7 +172,7 @@ int main()
 
             }
 
-            if(1){
+            if(deviceCount != 0){
                 begin = std::chrono::high_resolution_clock::now();
                 std::vector<std::string> gpu_sssp_result_v2 = gpu_shortest_paths_v2(graph, csr_graph);
                 end = std::chrono::high_resolution_clock::now();
@@ -163,7 +185,7 @@ int main()
         if (graph.sup_wcc) {
             int wcc_pass = 0;
 
-            if (1) {
+            if (hostCount != 0) {
                 std::vector<std::vector<int>> cpu_wcc_result;
                 begin = std::chrono::high_resolution_clock::now();
                 cpu_wcc_result = CPU_connected_components<double>(graph.OUTs, graph.INs);
@@ -174,7 +196,7 @@ int main()
                 wcc_ldbc_checker(graph, cpu_wcc_result, wcc_pass);
             }
 
-            if(1){
+            if(hostCount != 0){
                 std::vector<std::vector<std::string>> cpu_wcc_result_v2;
                 begin = std::chrono::high_resolution_clock::now();
                 cpu_wcc_result_v2 = CPU_connected_components_v2(graph);
@@ -186,7 +208,7 @@ int main()
             }            
 
             std::vector<std::vector<int>> gpu_wcc_result;
-            if (1) {
+            if (deviceCount != 0) {
                 elapsedTime = 0;
                 begin = std::chrono::high_resolution_clock::now();
                 gpu_wcc_result = gpu_connected_components(csr_graph, &elapsedTime);
@@ -197,7 +219,7 @@ int main()
                 wcc_ldbc_checker(graph, gpu_wcc_result, wcc_pass);
             }
             
-            if(1){
+            if(deviceCount != 0){
                 elapsedTime = 0;
                 begin = std::chrono::high_resolution_clock::now();
                 std::vector<std::vector<std::string>> gpu_wcc_result_v2 = gpu_connected_components_v2(csr_graph, &elapsedTime);
@@ -211,7 +233,7 @@ int main()
         if (graph.sup_lcc) {
             int lcc_pass = 0;
 
-            if (1) {
+            if (hostCount != 0) {
                 std::vector<double> cpu_lcc_result;
                 begin = std::chrono::high_resolution_clock::now();
                 cpu_lcc_result = computeLCC<double>(graph);
@@ -221,7 +243,7 @@ int main()
                 lcc_ldbc_checker(graph, cpu_lcc_result, lcc_pass);
             }
 
-            if(1){
+            if(deviceCount != 0){
                 std::vector<double> gpu_lcc_result;
                 begin = std::chrono::high_resolution_clock::now();
                 gpu_lcc_result = computeLCC_GPU(graph);
@@ -237,7 +259,7 @@ int main()
          if (graph.sup_pr) {
             int pr_pass = 0;
 
-            if (1) {
+            if (hostCount != 0) {
                 vector<double> cpu_pr_result;
                 begin = std::chrono::high_resolution_clock::now();
                 cpu_pr_result = PageRank(graph.INs, graph.OUTs, graph.pr_damping, graph.pr_its);
@@ -250,7 +272,7 @@ int main()
                 
             }
 
-            if(1){
+            if(hostCount != 0){
                 begin = std::chrono::high_resolution_clock::now();
                 vector<std::string> cpu_pr_result_v2 = PageRank_v2(graph);
                 end = std::chrono::high_resolution_clock::now();
@@ -259,7 +281,7 @@ int main()
                 pr_ldbc_checker_v2(graph, cpu_pr_result_v2, pr_pass);
             }
 
-            if (1) {
+            if (deviceCount != 0) {
                 elapsedTime = 0;
                 vector<double> gpu_pr_result;
                 begin = std::chrono::high_resolution_clock::now();
@@ -271,7 +293,7 @@ int main()
                 pr_ldbc_checker(graph, gpu_pr_result, pr_pass);
             }
 
-            if(1){
+            if(deviceCount != 0){
                 vector<std::string> gpu_pr_result_v2;
                 begin = std::chrono::high_resolution_clock::now();
 
@@ -287,7 +309,7 @@ int main()
          if (graph.sup_cdlp) {
             int cdlp_pass = 0;
 
-            if (1) {
+            if (hostCount != 0) {
                 std::vector<string> ans_cpu;
 
                 int N = graph.vertex_id_to_str.size();
@@ -306,7 +328,7 @@ int main()
                 
             }
 
-            if (1) {
+            if (deviceCount != 0) {
 
                 std::vector<string> ans_gpu(graph.size());
                 begin = std::chrono::high_resolution_clock::now();

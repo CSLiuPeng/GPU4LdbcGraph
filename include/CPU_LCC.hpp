@@ -6,7 +6,7 @@
 template<typename T> // T is float or double
 std::vector<double> computeLCC(LDBC<double> & input_graph) {
         int V = input_graph.size();
-	   
+        std::cout<<"The lcc graph input size is:"<<V<<std::endl;
         std::vector<double> LCC(V, 0.0);
 
         for (int u = 0; u < V; ++u) {
